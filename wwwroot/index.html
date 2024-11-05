@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pressure</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: stretch;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .current-pressure {
+            font-size: 1.5em;
+            margin: 0.5em;
+        }
+
+        .chart-container {
+            flex: 1;
+            overflow: hidden;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="current-pressure">Current pressure: <span id="currentPressure"></span></div>
+    <div class="chart-container">
+        <canvas id="pressureChart"></canvas>
+    </div>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+    const formatter100mbar = new Intl.NumberFormat(undefined, {
+        maximumFractionDigits: 0,
+    });
+    const formatter10mbar = new Intl.NumberFormat(undefined, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+    });
+    const formatter1mbar = new Intl.NumberFormat(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+    function formatPressure(pressure) {
+        let pressureText = '';
+        if (pressure >= 100) {
+            pressureText = formatter100mbar.format(pressure);
+        } else if (pressure >= 10) {
+            pressureText = formatter10mbar.format(pressure);
+        } else if (pressure >= 1) {
+            pressureText = formatter1mbar.format(pressure);
+        } else {
+            const [base, exponential] = pressure.toExponential(2).split('e');
+            pressureText = formatter1mbar.format(+base) + ' e' + exponential;
+        }
+        return pressureText;
+    }
+
+    const currentPressure = document.getElementById('currentPressure');
+    async function updatePressure() {
+        const resp = await fetch('/pressure')
+        const data = await resp.json();
+        currentPressure.innerText = formatPressure(data.currentPressure) + ' mbar';
+        if (!chart) return;
+        chart.data.datasets[0].data = data.pressureHistory.map(d => ({ x: new Date(d.timestamp), y: d.pressure }));
+        chart.update();
+    }
+    async function updatePressureInLoop() {
+        try {
+            await updatePressure();
+        } catch (e) {
+            console.error(e);
+        }
+        setTimeout(() => {
+            updatePressureInLoop();
+        }, 10000);
+    }
+    updatePressureInLoop();
+
+    const pressureChart = document.getElementById('pressureChart');
+    const chart = new Chart(pressureChart, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Pressure',
+                data: [],
+            }]
+        },
+        options: {
+            scales: {
+                x: {
+                    type: 'time',
+                    // time should use 24h format
+                    time: { displayFormats: { hour: 'HH', minute: 'HH:mm', second: 'HH:mm:ss' } },
+                    ticks: { color: '#999' },
+                },
+                y: {
+                    type: 'logarithmic',
+                    ticks: { callback: (value) => formatPressure(+value) },
+                    title: { display: true, text: 'Pressure (mbar)' },
+                    grid: { color: '#999' },
+                }
+            },
+            resizeDelay: 100,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ({ parsed }) => formatPressure(parsed.y) + ' mbar',
+                    },
+                },
+            },
+        }
+    });
+</script>
+
+</html>
