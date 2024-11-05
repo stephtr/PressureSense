@@ -1,4 +1,4 @@
 public interface IPressureSensor
 {
-    float GetPressure();
+    Task<float> GetPressureAsync();
 }

@@ -1,8 +1,8 @@
 public class DummySensor : IPressureSensor
 {
     private readonly Random _random = new();
-    public float GetPressure()
+    public Task<float> GetPressureAsync()
     {
-        return (float)_random.NextDouble() * 100;
+        return Task.FromResult((float)_random.NextDouble() * 100);
     }
 }

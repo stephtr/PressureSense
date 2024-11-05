@@ -17,7 +17,7 @@ public class PressureFetcherService : BackgroundService
         {
             try
             {
-                var pressure = PressureSensor.GetPressure();
+                var pressure = await PressureSensor.GetPressureAsync();
                 await PressureHistory.AddPressureAsync(pressure);
             }
             catch (Exception ex)
