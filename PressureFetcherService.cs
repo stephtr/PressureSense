@@ -24,7 +24,7 @@ public class PressureFetcherService : BackgroundService
             {
                 Logger.LogError(ex, "Error fetching pressure");
             }
-            await Task.Delay(1000, stoppingToken);
+            await Task.Delay(10000, stoppingToken);
         }
     }
 }
